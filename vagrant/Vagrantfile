@@ -1,0 +1,51 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# read vm configurations from JSON files
+nodes_config = (JSON.parse(File.read("servers.json")))['nodes']
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  nodes_config.each do |node|
+    node_name   = node[0] # name of node
+    node_values = node[1] # content of node
+
+    config.vm.box = node_values[':box']
+
+    config.vm.define node_name do |config|
+      # configures all forwarding ports in JSON array
+      ports = node_values['ports']
+      ports.each do |port|
+        config.vm.network :forwarded_port,
+          host:  port[':host'],
+          guest: port[':guest'],
+          id:    port[':id']
+      end
+
+      config.vm.hostname = node_name
+      config.vm.network :private_network, ip: node_values[':ip']
+
+      config.vm.provider :virtualbox do |vb|
+        vb.customize [
+          "modifyvm", :id,
+          "--name", node_name,
+          '--cpus', node_values[':cpus'],
+          "--memory", node_values[':memory'],
+          '--groups', node_values[':groups'],
+          '--vrde', node_values[':vrde'],
+          '--vrdeport', node_values[':vrdeport']
+        ]
+      end
+      if (node_name == "ansible.example.com")
+        config.vm.provision "file", source: "provision/ansible.tar.gz", destination: "$HOME/ansible.tar.gz"
+        config.vm.provision "file", source: "provision/private", destination: "$HOME/id_rsa"
+        config.vm.provision "file", source: "provision/public", destination: "$HOME/id_rsa.pub"
+        config.vm.provision "shell", path: "provision/configure-ansible.sh"
+      else
+        config.vm.provision "file", source: "provision/public", destination: "$HOME/id_rsa.pub"
+        config.vm.provision "shell", path: "provision/configure-server.sh"
+      end
+    end
+  end
+end

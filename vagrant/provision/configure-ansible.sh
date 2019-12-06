@@ -106,6 +106,7 @@ if [ ! -f "ansible.tar.gz" ]; then
 else
     tar zxvf ansible.tar.gz &> /dev/null
     rm -f ansible.tar.gz &> /dev/null
+    sudo chown -R vagrant:vagrant ansible
 fi
 echo "[Success]: Skeleton Ansible directory is created."
 

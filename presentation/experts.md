@@ -151,6 +151,30 @@ For any self-contained set of playbooks (this might be all of your playbooks, or
     └── with_roles
 ```
 
+--
+## Naming tasks
+
+Best practices suggest always naming tasks — it's easier to follow what is happening if the tasks are well named.
+
+Naming tasks also allows the use of `--start-at-task` to allow ansible-playbook to start at a later point in the playbook
+
+--
+## Naming tasks
+
+The task in the previous playbook looks like this when named:
+
+```bash
+TASK [ensure ~/.remove does not exist] ****************************************
+ok: [target]
+```
+
+And when not named:
+
+```bash
+TASK [file] ********************************************************************
+ok: [target]
+```
+
 ---
 ## Roles
 
@@ -256,20 +280,160 @@ The become modifiers are useful when you need a task to run as a different user 
 ---
 ## Handlers
 
+Handlers are tasks that are 'fired' when a task makes a change
+
+```ini
+tasks:
+  - name: install httpd configuration file
+      template:
+        src: etc/httpd/conf/httpd.conf.j2
+        dest: /etc/httpd/conf/httpd.conf
+      notify: reload apache
+
+handlers:
+  - name: reload apache
+      service:
+        name: apache
+        state: reloaded
+```
+
+--
+## Handlers
+
+This is another mechanism of ensuring a change is made only when it needs to be (as if no change is made to the configuration, the handler will not fire)
+
+Handlers are run at the end of all tasks — if you want to run them earlier, you can use the meta task:
+
+```ini
+- meta: flush_handlers
+```
+
 ---
 ## Templates
+- Templates allow you to generate configuration files from values set in various inventory properties. This means that you can store one template in source control that applies to many different environments.
+
+- Ansible uses the Jinja templating language. The language offers control structures `({% for %}`, `{% if %}` etc.) and filters that process variables (e.g. `{{ "hello"|upper }} would print HELLO`.
+
+--
+## Template example
+
+An example might be a file specifying database connection information that would have the same structure but different values for dev, test and prod environments
+
+```ini
+$db_host = '{{ database_host }}';
+$db_name = '{{ database_name }}';
+$db_user = '{{ database_username }}';
+$db_pass = '{{ database_password }}';
+$db_port = {{ database_port}};
+```
+
+--
+## Using templates
+
+Templates are populated by using the template module
+
+```ini
+- name: Apache2 -> deploy configuration
+  template:
+    src: 00-default.conf.j2
+    dest: /etc/apache2/site-enabled/00-default.conf
+```
+
+--
+## Template directory structure
+
+Because configuration files for an application can end up with similar names in different directories, reflect the target destination in the source repository
+
+```ini
+- name: configure logrotate
+  template:
+    src: etc/logrotate.d/httpd.conf.j2
+    dest: /etc/logrotate.d/httpd.conf
+
+- name: configure apache
+  template:
+    src: etc/httpd/conf/httpd.conf.j2
+    dest: /etc/httpd/conf/httpd.conf
+    owner: apache
+```
 
 ---
 ## User creation
 
+Fir creating users you can use the user module of Ansible. With this module it is possible to create new users with passwords, home directory's, set shells or add to groups.
+
+--
+## Example: User playbook
+
+--
+## Exercise: Users
+
+Create a playbook that will add a user to the servers, with a password and sshkeu.
+
 ---
 ## Vault
+
+- create: `ansible-vault create secrets.yml`
+- edit: `ansible-vault edit secrets.yml`
+- view: `ansible-vault view secrets.yml`
+- encrypt existing file: `ansible-vault encrypt secrets.yml`
+- decrypt existing file: `ansible-vault encrypt secrets.yml`
+- change password: `ansible-vault rekey secrets.yml`
+
+--
+## Using vaulted secrets
+
+```bash
+ansible=playbook playbook.yaml --ask-vault-pass
+ansible-playbook playbook.yaml --vault-password-file=~/ansible.pass
+```
 
 ---
 ## Roling upgrades
 
----
-## Debugging
+With rolling upgrades you can update applications or servers in batches. When one or more fails Ansible stop and the other applications or servers will not update. This will ensure when something fails a set of working applications or servers are still live.
+
+--
+## VMWare
+
+Ansible can communicate witj the API of VMWare. With the module `vmware_guest_snapshot` it is possible to create a snapshot before the update. If an update fauils Ansible could revert to the snapshot. This would require a `block` and `rescue` section in your playbook,
+
+--
+## Serial
+
+To use rolling updates you need to use the `serial` option in your playbook or in de the `ansible.cfg`
+
+```ini
+- hosts: all
+  become: true
+  serial: 4
+
+  ....
+```
+
+This will update the application or servers in batches of 4
 
 ---
-## Error handleing
+## Debugging / error handleing
+
+By default Ansible is not very clear in error messages. The most common error are:
+
+- YANK Synrax error - Ansible will not run
+- Module errors - Ansible will run
+
+--
+## YAML Syntax
+
+The best way of debugging Yaml Syntax errors are to use an IDE with syntax highlighting or a linter.
+
+- Atom, VScide, vi
+- ansible-lint
+
+`Also it is best to use spaces instead of tabs`
+
+--
+## Ansible modules
+
+When you have a module error it is hard to debuf the playbook. Most of the time it is a miss spelled tag of the module. When this happens it is best to consult the Ansible documentation online or use the command: 
+
+ansible-doc [module name]

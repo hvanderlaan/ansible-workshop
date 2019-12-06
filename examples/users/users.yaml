@@ -1,0 +1,20 @@
+# -*- mode: utf-8 -*-
+# vi: ft=yaml.ansible
+---
+
+- hosts: all
+  become: true
+  gather_facts: false
+
+  tasls:
+    - name: vars -> include user variables
+      include_vars: vars.yaml
+
+     - name: users -> creating users on system
+       user:
+         name: "{{ ittem.username }}"
+         home: "{{ item.homedir }}"
+         shell: "{{ item.shell }}"
+         password: "{{ item.password }}"
+         state: "{{ item.state }}"
+       loop: user

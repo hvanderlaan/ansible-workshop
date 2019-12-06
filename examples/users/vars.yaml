@@ -1,0 +1,20 @@
+---
+user:
+  - namename: foo
+    homedir: /home/foo
+    shell: /bin/bash
+    password: uawyefgnxjkayuwrefiadhaudcahqwihefiashkadjas
+    state: present
+
+  - username: bar
+    homedir: /home/bar
+    shell: /bin/zsh
+    password: rtde8743ojnwef67gy7bqwd9u3y8ubedjnbbeuyt4uhbwe
+    state: present
+
+  - username: evil
+    homedir: /home/hacker
+    shell: /bin/sh
+    password: NULL
+    state: absent
+

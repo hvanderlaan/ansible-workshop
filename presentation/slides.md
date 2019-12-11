@@ -308,6 +308,31 @@ Handlers are run at the end of all tasks — if you want to run them earlier, yo
 - meta: flush_handlers
 ```
 
+--
+## Example: Handlers
+
+```ini
+tasks:
+  - name: install httpd configuration file
+      template:
+        src: etc/httpd/conf/httpd.conf.j2
+        dest: /etc/httpd/conf/httpd.conf
+      notify: reload apache
+
+handlers:
+  - name: reload apache
+      service:
+        name: apache
+        state: reloaded
+```
+
+--
+## Exercise: Handlers
+
+Create a role or playbook that changes the sshd configuration and when the configuration is changed, sshd must be restarted.
+
+Modules to use `lineinfile` and change the setting `PermitRootLogin` to no
+
 ---
 ## Templates
 - Templates allow you to generate configuration files from values set in various inventory properties. This means that you can store one template in source control that applies to many different environments.
@@ -320,11 +345,15 @@ Handlers are run at the end of all tasks — if you want to run them earlier, yo
 An example might be a file specifying database connection information that would have the same structure but different values for dev, test and prod environments
 
 ```ini
-$db_host = '{{ database_host }}';
-$db_name = '{{ database_name }}';
-$db_user = '{{ database_username }}';
-$db_pass = '{{ database_password }}';
-$db_port = {{ database_port}};
+########################################################
+## WARNING: This server is managed with Ansible       ##
+##          Please make changed to the Ansible soyrce ##
+##          and not on the server                     ##
+########################################################
+
+os  : {{ansible_system}} - {{ ansible_lsb.description }}
+type: {{ ansible_virtualization_role }}
+fqdn: {{ ansible_fqdn }}
 ```
 
 --
@@ -356,6 +385,10 @@ Because configuration files for an application can end up with similar names in 
     dest: /etc/httpd/conf/httpd.conf
     owner: apache
 ```
+--
+## Exercise: Templates
+
+Creatd your own dynamic motd template and make use of Ansible variables.
 
 ---
 ## User creation
@@ -388,6 +421,12 @@ ansible=playbook playbook.yaml --ask-vault-pass
 ansible-playbook playbook.yaml --vault-password-file=~/ansible.pass
 ```
 
+--
+## Exercise: Vault
+
+Create your own secure inventory or variables file with ansible-vault. Test this with a playbook.
+Use the edit function to edit an ansible-vault file.
+
 ---
 ## Roling upgrades
 
@@ -397,6 +436,40 @@ With rolling upgrades you can update applications or servers in batches. When on
 ## VMWare
 
 Ansible can communicate witj the API of VMWare. With the module `vmware_guest_snapshot` it is possible to create a snapshot before the update. If an update fauils Ansible could revert to the snapshot. This would require a `block` and `rescue` section in your playbook,
+
+--
+## VMware
+
+```ini
+- name: vmware -> find folder by name
+  vmware_guest_find:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: no
+    name: "{{ ansible_host }}"
+  register: vm_folder
+  delegate_to: localhost
+```
+
+--
+## VMWARE
+
+```ini
+- name: Create VM snapshot
+  vmware_guest_snapshot:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: no
+    datacenter: Hengelo
+    folder: vm_folder
+    name: "{{ ansible_host }}"
+    state: present
+    snapshot_name: pre-os-updates
+  delegate_to: loca;host
+
+```
 
 --
 ## Serial
